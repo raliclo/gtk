@@ -962,6 +962,15 @@ winpointer_enumerate_devices (GdkDeviceManagerWin32 *device_manager)
           device_manager->winpointer_devices = g_list_delete_link (device_manager->winpointer_devices,
                                                                         current);
 
+          /* The core pointer keeps a plain pointer to the physical device
+           * that sent the last event, and queries it for the pointer state.
+           * Point it back at the system pointer before the device goes away,
+           * or the next query reads a freed device.
+           */
+          if (GDK_DEVICE_VIRTUAL (device_manager->core_pointer)->active_device == GDK_DEVICE (device))
+            _gdk_device_virtual_set_active (device_manager->core_pointer,
+                                            device_manager->system_pointer);
+
           gdk_device_update_tool (GDK_DEVICE (device), NULL);
 
           if (device->tool_pen)
