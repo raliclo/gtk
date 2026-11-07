@@ -915,7 +915,13 @@ gtk_im_context_ime_set_preedit_font (GtkIMContext *context)
   if (!font)
     goto ERROR_OUT;
 
-  logfont = pango_win32_font_logfont (font);
+  /* GTK 4 on Windows renders with pangocairo fonts, which are not
+   * PangoWin32Font instances. Calling pango_win32_font_logfont() on such a
+   * font trips its PANGO_WIN32_IS_FONT() assertion (a g_critical) and then
+   * returns NULL. Guard the call so the common Windows case stays quiet; the
+   * IME composition-window font is then simply left at its default, exactly
+   * as the existing NULL-logfont path below already does. */
+  logfont = PANGO_WIN32_IS_FONT (font) ? pango_win32_font_logfont (font) : NULL;
   if (logfont)
     ImmSetCompositionFontA (himc, logfont);
 
