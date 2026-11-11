@@ -920,8 +920,15 @@ gtk_im_context_ime_set_preedit_font (GtkIMContext *context)
    * font trips its PANGO_WIN32_IS_FONT() assertion (a g_critical) and then
    * returns NULL. Guard the call so the common Windows case stays quiet; the
    * IME composition-window font is then simply left at its default, exactly
-   * as the existing NULL-logfont path below already does. */
-  logfont = PANGO_WIN32_IS_FONT (font) ? pango_win32_font_logfont (font) : NULL;
+   * as the existing NULL-logfont path below already does.
+   *
+   * PANGO_WIN32_IS_FONT() itself is private to Pango (pangowin32-private.h)
+   * and the public pangowin32.h exports no type function for PangoWin32Font,
+   * so the type is looked up by name. If no PangoWin32Font was ever created
+   * the type is not registered, g_type_from_name() returns 0, and the check
+   * is FALSE -- which is the right answer for that case too. */
+  logfont = G_TYPE_CHECK_INSTANCE_TYPE (font, g_type_from_name ("PangoWin32Font"))
+            ? pango_win32_font_logfont (font) : NULL;
   if (logfont)
     ImmSetCompositionFontA (himc, logfont);
 
